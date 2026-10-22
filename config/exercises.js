@@ -1,6 +1,6 @@
 // Exercise library. Every exercise is plain data — no code needed.
 //
-// Quick reference (full docs in README.md → "Exercise format"):
+// Quick reference (full docs: docs/exercise-format.md):
 //   name, target      text, or { de: "…", en: "…" }
 //   scene             "bed" | "mat" | "floor"
 //   highlight         glowing circle on the working area: "hip" | "core" | "sho"
