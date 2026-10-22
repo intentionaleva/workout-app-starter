@@ -1,0 +1,18 @@
+{
+  "name": "workout-app-starter",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Build your own installable workout app with animated exercise demos. No account, no server, your data stays on your phone.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "start": "npx --yes serve -l 3000 .",
+    "check": "node tools/check-poses.js && node tools/validate-config.js",
+    "smoke": "node tools/smoke-test.js",
+    "screenshots": "node tools/screenshots.js",
+    "test": "npm run check && npm run smoke"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  }
+}

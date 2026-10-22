@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F3F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#11151B" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Training">
+<meta name="description" content="Workout app with animated exercise demos. No account, no server, your data stays on your phone.">
+<title>Unser Training</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+<script src="version.js"></script>
+<script type="module" src="src/app.js"></script>
+</head>
+<body>
+<div id="app"></div>
+<noscript><p style="padding:24px">This app needs JavaScript.</p></noscript>
+<script>
+// Opened by double-clicking index.html? Browsers block JavaScript modules on file://.
+if (location.protocol === "file:") setTimeout(function () {
+  if (!document.getElementById("app").children.length) document.getElementById("app").innerHTML =
+    '<div class="card" style="margin-top:24px"><h2>Almost there</h2><p>Browsers don’t run this app straight from a file. Start a small local server in this folder instead:</p>' +
+    '<pre style="white-space:pre-wrap">npx serve\n# or\npython3 -m http.server</pre><p>Then open the address it prints (for example http://localhost:3000).</p></div>';
+}, 800);
+</script>
+</body>
+</html>
