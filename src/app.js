@@ -44,7 +44,7 @@ async function boot() {
   }
   errors.forEach(m => console.error(m));
   if (cfg.tones) try { applyTones(cfg.tones); } catch (e) { /* ignore */ }
-  renderErrors(errors);
+  renderErrors(errors, root);
   window.__app = { errors };
 }
 

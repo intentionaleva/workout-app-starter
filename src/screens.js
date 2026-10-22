@@ -350,7 +350,8 @@ export function renderDisclaimer(after = "home") {
   if (b) b.focus();
 }
 
-export function renderErrors(list) {
+export function renderErrors(list, root) {
+  if (root) app = root;
   app.innerHTML = `<div class="screen"><h1>${esc(t("configError"))}</h1><div class="card stack errors" role="alert"><ul>` +
     list.map(m => `<li>${esc(m)}</li>`).join("") + `</ul><p class="muted">${esc(t("configErrorHint"))}</p></div></div>`;
 }

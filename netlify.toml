@@ -1,0 +1,13 @@
+# No build step: Netlify serves the folder as it is.
+[build]
+  publish = "."
+
+# Let phones notice updates quickly.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+[[headers]]
+  for = "/version.js"
+  [headers.values]
+    Cache-Control = "no-cache"
