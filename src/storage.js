@@ -12,8 +12,8 @@ let prefix = "workout";
 let LOG = [];
 const mem = {};   // fallback when localStorage is unavailable (private mode, blocked storage)
 
-function rawGet(k) { try { const v = localStorage.getItem(k); return v; } catch (e) { return k in mem ? mem[k] : null; } }
-function rawSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { mem[k] = v; } }
+function rawGet(k) { if (k in mem) return mem[k]; try { return localStorage.getItem(k); } catch (e) { return null; } }
+function rawSet(k, v) { try { localStorage.setItem(k, v); delete mem[k]; } catch (e) { mem[k] = v; } }
 function rawDel(k) { try { localStorage.removeItem(k); } catch (e) { delete mem[k]; } }
 function allKeys() {
   try { const out = []; for (let i = 0; i < localStorage.length; i++) out.push(localStorage.key(i)); return out; }
@@ -34,7 +34,12 @@ export function delPref(name) { rawDel(K(name)); }
 /* ---------- log ---------- */
 
 function loadLog() {
-  try { const l = JSON.parse(rawGet(K("log")) || "[]"); return Array.isArray(l) ? l.filter(e => e && typeof e.ts === "number") : []; }
+  try {
+    const l = JSON.parse(rawGet(K("log")) || "[]");
+    if (!Array.isArray(l)) return [];
+    // An old v1 page still open somewhere may keep logging old ids; map them on read.
+    return l.filter(e => e && typeof e.ts === "number").map(e => prefix === "ut" && LEGACY_ROUTINES[e.r] && LEGACY_ROUTINES[e.r] !== e.r ? { ...e, r: LEGACY_ROUTINES[e.r] } : e);
+  }
   catch (e) { return []; }
 }
 function saveLog() { rawSet(K("log"), JSON.stringify(LOG)); }
@@ -60,8 +65,9 @@ export function exportData(appName, version) {
 
 /** Replace everything with the content of an export file. Returns false if the file doesn't look right. */
 export function importData(obj) {
-  if (!obj || typeof obj !== "object" || !obj.data || typeof obj.data !== "object") return false;
-  if (obj.data.log != null) { try { if (!Array.isArray(JSON.parse(obj.data.log))) return false; } catch (e) { return false; } }
+  // Only accept files made by Export: they always contain a log.
+  if (!obj || typeof obj !== "object" || !obj.data || typeof obj.data !== "object" || typeof obj.data.log !== "string") return false;
+  try { if (!Array.isArray(JSON.parse(obj.data.log))) return false; } catch (e) { return false; }
   resetAll();
   for (const [k, v] of Object.entries(obj.data)) if (typeof v === "string") rawSet(K(k), v);
   LOG = loadLog();

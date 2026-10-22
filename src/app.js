@@ -8,6 +8,12 @@ import { initLang } from "./i18n.js";
 import { initStorage, getPref } from "./storage.js";
 import { initScreens, applyTones, applyTheme, renderHome, renderDisclaimer, renderErrors, showUpdateBanner } from "./screens.js";
 
+// Listen for "update ready" right away: the service worker may answer before boot() is done.
+let updateReady = false, booted = false;
+if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", e => {
+  if (e.data && e.data.type === "updated") { updateReady = true; if (booted) showUpdateBanner(); }
+});
+
 async function load(path) {
   try { return { mod: (await import(path)).default }; }
   catch (e) { console.error(e); return { error: `${path.replace("../", "")} could not be loaded: ${e.message}` }; }
@@ -38,6 +44,8 @@ async function boot() {
       if (cfg.showDisclaimer !== false && !getPref("disclaimer", null)) renderDisclaimer();
       else renderHome();
       window.__app = ctx;   // used by the smoke test
+      booted = true;
+      if (updateReady) showUpdateBanner();
       registerServiceWorker();
       return;
     }
@@ -54,8 +62,8 @@ function registerServiceWorker() {
   // Add ?sw to the URL to test it locally anyway.
   const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
   if (local && !/[?&]sw\b/.test(location.search)) return;
-  navigator.serviceWorker.addEventListener("message", e => { if (e.data && e.data.type === "updated") showUpdateBanner(); });
   navigator.serviceWorker.register("sw.js").catch(() => {});
+  navigator.serviceWorker.ready.then(reg => { const w = navigator.serviceWorker.controller || reg.active; if (w) w.postMessage({ type: "hello" }); }).catch(() => {});
 }
 
 boot();

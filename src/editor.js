@@ -54,7 +54,7 @@ async function init() {
 }
 
 function open(id, X) {
-  S.id = id; S.X = X; S.playing = false; S.t = 0;
+  S.id = id; S.X = X; S.orig = JSON.stringify(X); S.playing = false; S.t = 0;
   compile();
   S.scene = S.def ? S.def.scene : "mat";
   S.pose = S.def && S.def.poses ? Object.keys(S.def.poses)[0] : null;
@@ -81,11 +81,16 @@ function newExercise() {
 /* ---------- model ---------- */
 
 function compile() {
-  const raw = { ...S.lib, [S.id]: S.X };
+  // config + library are always available as parents for `extends`
+  const raw = { ...S.sources.config, ...S.sources.library, ...S.lib, [S.id]: S.X };
   const { exercises, errors } = compileExercises(raw);
   S.def = exercises[S.id] || null;
   S.errors = errors.filter(e => e.startsWith(`Exercise "${S.id}"`)).map(e => e.replace(`Exercise "${S.id}": `, ""));
-  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ src: S.src, id: S.id, X: S.X })); } catch (e) { /* ignore */ }
+  // Keep a draft only once something was changed, so the editor doesn't reopen a stale copy.
+  try {
+    if (JSON.stringify(S.X) !== S.orig) localStorage.setItem(DRAFT_KEY, JSON.stringify({ src: S.src, id: S.id, X: S.X }));
+    else if (S.src !== "draft") localStorage.removeItem(DRAFT_KEY);
+  } catch (e) { /* ignore */ }
 }
 
 const groundY = () => (SCENES[S.scene] || SCENES.mat).groundY;
@@ -463,7 +468,7 @@ function stepEdit(el) {
   else if (k === "2") st[2] = Math.max(1, parseFloat(el.value) || 0);
   else if (k === "3de" || k === "3en") { let lab = st[3]; if (typeof lab === "string") lab = { de: lab }; st[3] = { ...(isObj(lab) ? lab : {}), [k.slice(1)]: el.value }; }
   else if (k === "4") st[4] = el.value;
-  else if (k === "5") { if (el.value) { while (st.length < 5) st.push("calm"); st[5] = el.value; } else st.length = Math.min(st.length, 5); }
+  else if (k === "5") { if (el.value) { if (st.length < 4) st[3] = ""; if (st.length < 5) st[4] = "calm"; st[5] = el.value; } else st.length = Math.min(st.length, 5); }
   compile(); refresh();
 }
 
@@ -506,12 +511,14 @@ function onClick(ev) {
   else if (b.id === "pose-add") {
     let n = "pose", i = 2; while (S.def.poses[n]) n = "pose" + i++;
     S.X.poses = S.X.poses || {};
-    S.X.poses[n] = clone((S.X.poses && S.X.poses[S.pose]) || {});
+    // copy this pose's own settings, or the whole pose if it's inherited from `extends`
+    S.X.poses[n] = clone((S.X.poses && S.X.poses[S.pose]) || (S.X.extends ? S.def.poses[S.pose] : {}));
     S.pose = n; compile(); render();
   }
   else if (b.id === "pose-ren") {
     const nn = (prompt("New name for this pose", S.pose) || "").trim().replace(/\s+/g, "-");
     if (!nn || nn === S.pose || (S.def.poses && S.def.poses[nn])) return;
+    if (S.X.extends && !(S.X.poses && S.X.poses[S.pose])) { toast(`“${S.pose}” comes from ${S.X.extends} and can't be renamed here. Use + New pose instead.`); return; }
     const rename = list => (list || []).forEach(st => { if (st[0] === S.pose) st[0] = nn; if (st[1] === S.pose) st[1] = nn; });
     S.X.poses = S.X.poses || {};
     S.X.poses[nn] = S.X.poses[S.pose] || {};
@@ -563,10 +570,18 @@ root.addEventListener("click", onClick);
 function loadPasted(text) {
   let v;
   try {
-    let s = text.trim().replace(/^export\s+default\s+/, "").replace(/;\s*$/, "").replace(/,\s*$/, "");
-    if (/^["'][^"']+["']\s*:/.test(s) || /^[\w-]+\s*:\s*\{/.test(s)) s = "{" + s + "}";
+    let body;
+    if (/\bexport\s+default\b/.test(text)) {
+      // a whole file: drop imports, turn `export default` into `return`, keep its constants
+      body = text.replace(/^\s*import\s.*$/gm, "").replace(/\bexport\s+default\b/, "return ");
+    } else {
+      let s = text.trim().replace(/;\s*$/, "").replace(/,\s*$/, "");
+      if (/^["'][^"']+["']\s*:/.test(s) || /^[\w-]+\s*:\s*\{/.test(s)) s = "{" + s + "}";
+      body = "return (" + s + ");";
+    }
     // This runs code you pasted yourself, in your own browser (like the dev console).
-    v = new Function(...Object.keys(PASTE_CONSTS), '"use strict"; return (' + s + ");")(...Object.values(PASTE_CONSTS));
+    const names = Object.keys(PASTE_CONSTS).filter(k => !new RegExp("\\b(const|let|var)\\s+" + k + "\\b").test(body));
+    v = new Function(...names, body)(...names.map(k => PASTE_CONSTS[k]));
   } catch (e) { toast("Couldn't read that: " + e.message); return; }
   if (!isObj(v)) { toast("That doesn't look like an exercise"); return; }
   const single = ["name", "poses", "loop", "cues", "base"].some(k => k in v);

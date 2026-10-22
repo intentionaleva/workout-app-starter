@@ -24,19 +24,25 @@ self.addEventListener("install", e => {
 
 self.addEventListener("activate", e => {
   e.waitUntil((async () => {
-    const old = (await caches.keys()).filter(k => k.startsWith(PREFIX) && k !== CACHE);
+    // also remove the cache of the original single-file app ("unser-training-v4")
+    const old = (await caches.keys()).filter(k => (k.startsWith(PREFIX) && k !== CACHE) || /^unser-training-v\d+$/.test(k));
     await Promise.all(old.map(k => caches.delete(k)));
     await self.clients.claim();
     if (old.length) notify();
   })());
 });
 
-let notified = false;
+// If no page is open yet (the check finished during navigation), remember it and
+// answer the page's "hello" once it has loaded.
+let pending = false;
 async function notify() {
-  if (notified) return;
-  notified = true;
-  for (const c of await self.clients.matchAll({ type: "window" })) c.postMessage({ type: "updated" });
+  const list = await self.clients.matchAll({ type: "window" });
+  if (!list.length) { pending = true; return; }
+  for (const c of list) c.postMessage({ type: "updated" });
 }
+self.addEventListener("message", e => {
+  if (e.data && e.data.type === "hello" && pending && e.source) { pending = false; e.source.postMessage({ type: "updated" }); }
+});
 
 // Stale-while-revalidate: answer from the cache right away (fast, works offline),
 // then fetch a fresh copy in the background. If it changed, offer a reload.
@@ -45,7 +51,10 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET" || new URL(req.url).origin !== location.origin) return;
   e.respondWith((async () => {
     const cache = await caches.open(CACHE);
-    const hit = await cache.match(req, { ignoreSearch: req.mode === "navigate" });
+    // Pages are stored without their query string (?utm=…), so every link to a page shares one entry.
+    const url = new URL(req.url);
+    const key = req.mode === "navigate" ? url.origin + url.pathname : req;
+    const hit = await cache.match(key);
     const before = hit ? hit.clone() : null;
     const fresh = fetch(req, { cache: "no-cache" }).then(async res => {
       if (res && res.ok && res.type === "basic") {
@@ -53,7 +62,7 @@ self.addEventListener("fetch", e => {
           const [a, b] = await Promise.all([before.text(), res.clone().text()]);
           if (a !== b) notify();
         }
-        await cache.put(req, res.clone());
+        await cache.put(key, res.clone());
       }
       return res;
     });
