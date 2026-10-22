@@ -81,7 +81,8 @@ function checkPose(pose, at, err) {
   if (anchors.length === 0) err(`${at}: needs an anchor, one of hip: [x, y], sho: [x, y] or ank: [x, y]`);
   for (const k of anchors) if (!isPt(pose[k])) err(`${at}: "${k}" must be [x, y] with two numbers`);
   if (!isNum(pose.t)) err(`${at}: torso angle "t" is missing or not a number`);
-  for (const k of ["h", "tc", "g"]) if (k in pose && !isNum(pose[k])) err(`${at}: "${k}" must be a number`);
+  if ("h" in pose && pose.h !== null && !isNum(pose.h)) err(`${at}: head angle "h" must be a number (or null to follow the torso)`);
+  for (const k of ["tc", "g"]) if (k in pose && !isNum(pose[k])) err(`${at}: "${k}" must be a number`);
   for (const k of LIMBS) {
     const L = pose[k];
     if (L == null) continue;
