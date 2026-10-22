@@ -1,0 +1,238 @@
+# Spec: open-source "build your own workout app" template
+
+Handoff for Claude Code. Starting point: `current/`, a working single-file PWA I built for my husband and me. Goal: turn it into a public GitHub repo that other people fork and fill with **their own** exercises and routines. My routines stay in as a clearly labelled example.
+
+---
+
+## 1. What exists today (`current/`)
+
+- `index.html`: the whole app (HTML, CSS, JS in one file, about 65 KB, no build step, no dependencies except Google Fonts).
+- `manifest.webmanifest`, `sw.js`, icons: make it installable and offline-capable.
+- Deployed on Netlify via drag-and-drop, installed to the home screen on iPhone and Android.
+
+**Features**
+- Home screen with tiles: Morgenroutine (daily), Training A, Training B, Ausdauer (cardio check-off), Rückbildung (postpartum).
+- Overview per routine: sections (warm-up, main, core), rounds, thumbnails, equipment chips, last-used weight.
+- Player:
+  - Animated stick figure per exercise, with a phase label ("Hüfte hoch") and a breathing cue (Einatmen / Ausatmen / Spannung halten) plus a pulsing dot.
+  - Rep counter or countdown, per-side handling with a 4 s side switch, rests between exercises and longer rests between rounds.
+  - Prev/next buttons, pause, beep and vibration, screen wake lock.
+- Weight log per exercise: +/− stepper, 1 kg steps for dumbbells and 2 kg for kettlebells, with a progression hint.
+- Week view:
+  - Mon–Sun dots, ISO week number.
+  - Goal bars: daily routine 7×, strength 2×, cardio 5×.
+  - Summary of last week.
+- Cardio: tick off 30 min, pick a type, weekly target 5 × 30 min = 150 min (WHO).
+- Light and dark theme, German UI.
+- All data is stored in `localStorage` on the device. No accounts, no server.
+
+**How the animation works** (the part people will need to understand):
+- A 2D side-view rig: hip, torso, head, two legs (thigh, shin, foot), two arms (upper arm, forearm). Segment lengths are in `C`.
+- Angles are in degrees with 0 = straight down and 90 = pointing right (+x). Positive rotation is counter-clockwise on screen.
+- A pose is anchored in one of three ways: `hip:[x,y]`, `sho:[x,y]` (the shoulder; the hip is placed below it along the torso) or `ank:[x,y]` (planted ankle; knee and hip are solved upwards from `L1`).
+- Limbs are defined either by angles (`th`/`sh`/`ft` for legs, `ua`/`fa` for arms) or by an IK target `to:[x,y]` with bend direction `s: 1|-1`.
+- `t` is the torso angle and `h` the head direction. `tc` curves the torso (used for cat/cow).
+- `L2`/`A2` are the far-side limbs, drawn in a lighter grey behind the figure. `L1`/`A1` are the near side.
+- `g` is the glow strength of the highlight circle on the working muscle area (`hl: hip | core | sho`).
+- Each exercise has keyframe poses (`make()` returns `{name: pose}`) and a `loop`. A loop entry is `[from, to, ms, label, breath, easing?]`, where breath is one of `in | out | hold | calm`. An optional `intro` plays once (e.g. getting into the side plank).
+- Scenes: `bed`, `mat`, `floor`. `custom: "wiper"` is a hand-drawn top-down view, the only non-rig exercise.
+- Props: `["db"|"kb", "h1"|"h2"]` draws a dumbbell or kettlebell at that hand.
+
+---
+
+## 2. Target repo structure
+
+No build step, so people can fork it, edit a file and drag it to Netlify or GitHub Pages. Plain ES modules are fine. Avoid `fetch()` for core data so that opening `index.html` locally still works; use `.js` data files instead of `.json`, or document the need for a local server.
+
+```
+/
+├─ index.html              app shell (markup + CSS link + script tags)
+├─ styles.css
+├─ src/
+│  ├─ rig.js               skeleton, IK, pose solver, SVG drawing (from current code)
+│  ├─ player.js            timing, reps, sides, rests, breathing, beeps, wake lock
+│  ├─ screens.js           home, overview, player, cardio, week view
+│  ├─ storage.js           localStorage log, weights, export/import
+│  └─ i18n.js              string tables (de, en)
+├─ config/
+│  ├─ app.config.js        app name, colours per routine, weekly goals, rest times, language
+│  ├─ exercises.js         exercise library (declarative, see §3)
+│  └─ routines.js          which exercises, reps, sections, rounds
+├─ examples/
+│  └─ evas-plan/           my routines + exercises as the example set (current content)
+├─ editor.html             pose editor (see §4)
+├─ tools/check-poses.js    animation sanity check (CI)
+├─ manifest.webmanifest, sw.js, icons/
+├─ README.md, README.de.md, LICENSE (MIT), DISCLAIMER.md, CONTRIBUTING.md
+└─ .github/workflows/check.yml
+```
+
+The default `config/` ships with my plan, so the app works right after forking. The README explains: "This is my plan, replace it with yours."
+
+---
+
+## 3. Exercise format (the most important change)
+
+Today `make()` is a function that uses helpers (`M()` deep-merge, shared bases like `Q` for quadruped, `sceneY()`). For other people, make it **declarative data** so it can be written by hand, generated by the editor or generated by an AI.
+
+Proposed shape:
+
+```js
+export default {
+  "glute-bridge": {
+    name: { de: "Glute Bridges", en: "Glute bridges" },
+    target: { de: "Po & Beinrückseite", en: "Glutes & hamstrings" },
+    scene: "mat",                 // bed | mat | floor
+    highlight: "hip",             // hip | core | sho
+    equipment: null,              // null | "dumbbell" | "dumbbells" | "kettlebell"
+    props: [],                    // e.g. [["db","h1"]]
+    alternating: false,           // true = left/right is inside one rep (bird dog), no side switch
+    sideWord: null,               // e.g. "direction" for halos
+    view: null,                   // optional caption, e.g. "Front view"
+    base: { sho: [80, 207], h: -107, L1: { to: [212, 207], s: -1, ft: 90 } },  // shared by all poses
+    poses: {
+      down: { t: -90, g: 0.1 },
+      up:   { t: -50, g: 0.9 }
+    },
+    intro: [],
+    loop: [
+      ["down", "up",   1000, { de: "Über die Fersen: Hüfte hoch", en: "Drive through heels, hips up" }, "out"],
+      ["up",   "up",    700, { de: "Oben halten",                 en: "Squeeze at the top" },           "hold"],
+      ["up",   "down", 1500, { de: "Langsam absenken",            en: "Lower slowly" },                 "in"],
+      ["down", "down",  300, { de: "Kurz ablegen",                en: "Rest briefly" },                 "in"]
+    ],
+    cues: { de: ["…"], en: ["…"] },
+    repsPerLoop: 1                // deadbug = 2 (one loop = both sides)
+  }
+}
+```
+
+Requirements:
+- **Data instead of code:**
+  - `base` is deep-merged into every pose, which replaces `M()`.
+  - `extends: "other-exercise-id"` lets an exercise reuse another exercise's base and poses. `splift` reuses `sideplank` this way, and both bird dog variants share the quadruped base.
+  - Provide named shared bases (`quadruped`, `supine`, `standing`) in `rig.js`.
+- **No hardcoded floor Y in exercise data.** Pose y-coordinates that sit on the ground should be relative to the scene's floor (e.g. `ground: true` or `y: 0` meaning "on the floor"). Then the same exercise works in `bed` and `mat`. Today `gb` exists in both scenes via `make(y)`.
+- **Text-only exercises.** An exercise without `poses` must still work: it shows a neutral placeholder or an optional image or GIF URL, plus cues and the counter. This lets people add exercises immediately, before animating them.
+- **Validation.** On load, check the data and show a readable error on screen ("Exercise 'x': loop references unknown pose 'top'") instead of a blank app.
+- **Same behaviour.** Port all 28 existing exercises to the new format, and check that every animation looks and times exactly as it does now.
+
+Routine format:
+
+```js
+export default [
+  {
+    id: "morning", tone: "orange", name: { de: "Morgenroutine", en: "Morning routine" },
+    frequency: "daily", duration: "~8 min", rest: 5, roundRest: 5,
+    goal: { perWeek: 7, group: "morning" },
+    sections: [
+      { title: { de: "Im Bett", en: "In bed" }, rounds: 1, items: [
+        { ex: "glute-bridge", reps: 30, scene: "bed" },
+        { ex: "knee-wipers", reps: 10, perSide: true },
+        { ex: "bird-dog-reach", secs: 60 }
+      ]}
+    ]
+  }
+]
+```
+
+- Any number of routines. The home grid adapts: the first one or a `featured` routine gets a wide tile.
+- `goal.group` lets several routines count towards one weekly bar (A + B → "Strength 2×").
+- Cardio/check-off tiles are a routine type: `{ type: "checkoff", minutes: 30, perWeek: 5, kinds: [...] }`.
+
+---
+
+## 4. Pose editor (`editor.html`)
+
+This makes "add your own exercise" realistic for non-coders.
+
+- Pick or create an exercise and a pose, then edit it with sliders per joint angle and drag handles for anchor and IK targets on the SVG.
+- Toggle scene and props. Mirror preview.
+- Timeline: add, reorder and edit loop steps (from, to, duration, label, breath). Play the loop live with the same renderer as the app.
+- Onion-skin the previous pose (faint) while editing the next one.
+- **Export:** a "Copy as code" button produces the exercise object for `config/exercises.js`. Also offer import by pasting an existing object.
+- Run the same checks as `check-poses.js` live (clipping, below floor, NaN) and show warnings.
+- Same visual style as the app; works on a laptop, phone layout not required.
+
+---
+
+## 5. Other changes
+
+- **i18n.** All UI strings go into `i18n.js` (de + en). The language comes from `app.config.js`, with a fallback to the browser language. Exercise text uses `{de, en}` objects; a plain string means a single language.
+- **Config.** App name, short name, theme colours per tone, weekly goals, default rest times, kg step sizes and the cardio target all live in `app.config.js`. The manifest name should match (document that both need changing, or generate the manifest at runtime).
+- **Data backup.** Since data only lives on the device, add Export (download a JSON file) and Import in a small settings screen, plus "Reset all data" with an in-page confirm (no `confirm()`).
+- **Service worker.** Derive the cache version from a single `VERSION` constant. Show a small "Update available, tap to reload" banner instead of relying on close-and-reopen.
+- **Accessibility.** Keep the current state: real buttons, aria-labels, visible focus, reduced motion. Under `prefers-reduced-motion`, show the key poses as a static sequence instead of looping.
+- **Keep:** no accounts, no analytics, no external requests except fonts. Consider self-hosting the two fonts so the app is fully offline and makes no third-party request.
+
+---
+
+## 6. Repo docs
+
+**README.md (English) + README.de.md**
+1. One-line pitch: *Build your own installable workout app with animated exercise demos. No account, no server, your data stays on your phone.*
+2. Screenshots or a GIF (home, player, week view).
+3. **"This is an example."** The included routines are my personal plan for my husband and me. Replace them with your own.
+4. Quick start:
+   - Use this template / fork.
+   - Edit `config/routines.js`.
+   - Deploy to Netlify (button) or GitHub Pages.
+   - Open on your phone → "Add to Home Screen" (iPhone, Safari) or "Install app" (Android, Chrome).
+5. Adding an exercise, three ways:
+   - text-only (fastest)
+   - with the pose editor
+   - with an AI assistant: include a ready-to-copy prompt (see §8)
+6. How the rig works: a short version of §1 with a labelled diagram of the joints and angle convention.
+7. Updating your deployed app.
+8. Data and privacy: localStorage only, export/import, what clearing the browser does.
+9. Credits: built with Claude.
+
+**DISCLAIMER.md**, linked prominently in the README and shown once in the app on first launch:
+- Not medical advice.
+- Postpartum: get cleared by a doctor or pelvic-floor physiotherapist first (diastasis recti, pelvic floor) before core and impact work.
+- Use at your own risk; stop if anything hurts.
+
+**CONTRIBUTING.md**
+- Personal project shared as-is, issues may not get answers, forks very welcome.
+- Optional: PRs that add exercises to a shared `examples/library/` are welcome if they pass `check-poses`.
+
+**LICENSE:** MIT.
+
+---
+
+## 7. CI and checks
+
+- Port `tools/check-poses.js` to the new module layout. It should run over every exercise in `config/` and `examples/`.
+- GitHub Action on push/PR: run `check-poses`, plus a data-schema validation, plus a headless smoke test (Playwright: open the app, start each routine, skip through every step, no console errors).
+- Optional: generate the README screenshots in the same Playwright run.
+
+---
+
+## 8. AI prompt template for the README
+
+> I'm adding an exercise to my workout app. The app uses a 2D side-view stick-figure rig. Angles are in degrees, 0 = pointing down, 90 = pointing right. Poses are anchored by `hip`, `sho` or `ank`. Legs use `th`/`sh`/`ft`, arms use `ua`/`fa`, or `to:[x,y]` with bend `s`. Scenes: floor y = 207 for `mat`/`floor`. [paste full format docs + one example exercise]
+> Please write the exercise object for: **[exercise name]**, [reps/time], [equipment], with 2–4 keyframe poses, a loop with German and English phase labels, a breathing cue per step (in/out/hold/calm) and 3–4 form cues.
+
+Then paste it into the pose editor to preview and fine-tune.
+
+---
+
+## 9. Order of work (suggested)
+
+1. Set up the repo with `current/` as the first commit, so the original is preserved.
+2. Split into modules with no behaviour change. Verify with `check-poses` and a side-by-side visual check.
+3. Declarative exercise format, port all 28 exercises, add validation.
+4. Config + i18n (de/en), then routines from config, then the dynamic home grid.
+5. Text-only exercises.
+6. Export/import, update banner, first-launch disclaimer.
+7. Pose editor.
+8. Docs, screenshots, CI, Netlify button.
+
+## 10. Acceptance criteria
+
+- A fresh fork deployed unchanged looks and behaves like today's app: same exercises, timings, colours and German text.
+- Switching `language: "en"` gives a fully English UI and exercise text.
+- Adding a text-only exercise to a routine means editing one file and needs no JS knowledge.
+- A new animated exercise can be created in `editor.html` and pasted into `config/exercises.js` without touching `src/`.
+- `check-poses` and the smoke test pass in CI.
+- Lighthouse PWA installable; works offline after first load; no console errors.
