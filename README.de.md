@@ -2,7 +2,7 @@
 
 **Bau dir deine eigene installierbare Trainings-App mit animierten Übungen. Kein Konto, kein Server, deine Daten bleiben auf deinem Handy.**
 
-[English](README.md) · [Sicherheitshinweis](DISCLAIMER.md) · [Übungsformat (englisch)](docs/exercise-format.md) · [Posen-Editor](editor.html)
+**[▶ Demo ausprobieren](https://unser-training.netlify.app/)** · [English](README.md) · [Sicherheitshinweis](DISCLAIMER.md) · [Übungsformat (englisch)](docs/exercise-format.md) · [Posen-Editor](editor.html)
 
 <p>
   <img src="docs/screenshots/de-home.png" width="250" alt="Startseite mit Kacheln und Wochenansicht">

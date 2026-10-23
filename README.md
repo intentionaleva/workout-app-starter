@@ -2,7 +2,7 @@
 
 **Build your own installable workout app with animated exercise demos. No account, no server, your data stays on your phone.**
 
-[Deutsch](README.de.md) · [Safety note](DISCLAIMER.md) · [Exercise format](docs/exercise-format.md) · [Pose editor](editor.html)
+**[▶ Try the demo](https://unser-training.netlify.app/?lang=en)** · [Deutsch](README.de.md) · [Safety note](DISCLAIMER.md) · [Exercise format](docs/exercise-format.md) · [Pose editor](editor.html)
 
 <p>
   <img src="docs/screenshots/en-home.png" width="250" alt="Home screen with routine tiles and the week view">
