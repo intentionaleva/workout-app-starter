@@ -49,7 +49,7 @@ To try it on your computer first: run `npx serve` in the folder and open the add
 | Icons | [`icons/`](icons/) (192 × 192, 512 × 512 and a 180 × 180 `apple-touch-icon.png`) |
 
 Set `language: "en"` in `app.config.js` for an all-English app, or `"auto"` to follow the phone.
-Everyone can still switch in the app's settings.
+Everyone can still switch in the app's settings. Adding `?lang=en` to the address shows English for that visit only, without saving it (handy for sharing a demo link).
 
 Typo somewhere? The app tells you where, e.g. *Routine "strength-a": section 2, item 3: unknown exercise "goblet-sqat" (did you mean "goblet-squat"?)*.
 

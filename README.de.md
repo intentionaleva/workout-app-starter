@@ -48,7 +48,7 @@ Zum Ausprobieren am Computer: im Ordner `npx serve` ausführen und die angezeigt
 | Name unter dem App-Symbol | `config/app.config.js` **und** [`manifest.webmanifest`](manifest.webmanifest) |
 | App-Symbole | [`icons/`](icons/) |
 
-Mit `language: "en"` wird alles englisch, mit `"auto"` richtet sich die App nach dem Handy. Umschalten geht auch in den Einstellungen.
+Mit `language: "en"` wird alles englisch, mit `"auto"` richtet sich die App nach dem Handy. Umschalten geht auch in den Einstellungen. Mit `?lang=en` am Ende der Adresse erscheint die App nur für diesen Besuch auf Englisch, ohne es zu speichern (praktisch für einen Demo-Link).
 
 Vertippt? Die App sagt dir, wo: *Routine "strength-a": section 2, item 3: unknown exercise "goblet-sqat" (did you mean "goblet-squat"?)*.
 

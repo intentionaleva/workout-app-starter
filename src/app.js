@@ -25,7 +25,10 @@ async function boot() {
   const loadErrors = [a, x, r].filter(m => m.error).map(m => m.error);
   const cfg = a.mod || {};
   initStorage(cfg.storageKey);
-  initLang(cfg.language, getPref("lang", null));
+  // ?lang=en in the address shows that language for this visit only (handy for demo links).
+  // It isn't saved, so it never changes the language of an installed app.
+  const urlLang = new URLSearchParams(location.search).get("lang");
+  initLang(cfg.language, urlLang || getPref("lang", null));
 
   const errors = [...loadErrors];
   if (!loadErrors.length) {
