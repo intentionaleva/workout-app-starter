@@ -10,6 +10,23 @@
   <img src="docs/screenshots/de-player.png" width="250" alt="Player mit Wiederholungszähler, Gewicht und Hinweisen">
 </p>
 
+## Warum ich das gebaut habe
+
+Ich wollte etwas ganz Einfaches, das dem folgt, was die Forschung über gesundes Altern sagt. Die
+großen Faktoren, um bis ins Alter gesund zu bleiben, sind **Stabilität, Beweglichkeit, Kraft und
+Ausdauer**. Ich will nicht viermal pro Woche ins Fitnessstudio und keinen Extremsport machen. Ich
+wollte eine einfache Routine, die die Grundlagen abdeckt, damit wir uns bis ins hohe Alter gut
+bewegen können.
+
+Genau das macht der Beispielplan:
+
+- **Beweglichkeit:** eine tägliche Morgenroutine von 8 Minuten, teils noch im Bett
+- **Stabilität:** Gleichgewicht und Rumpf, z. B. Bird Dog, Seitstütz und einbeiniges Kreuzheben
+- **Kraft:** zwei Einheiten pro Woche à 35 Minuten mit Kettlebell und Kurzhanteln
+- **Ausdauer:** 5 × 30 Minuten von allem, was dich etwas außer Atem bringt (die 150 Minuten pro Woche der WHO)
+
+## Was drin ist
+
 - Animiertes Strichmännchen für jede Übung, mit Phase („Über die Fersen: Hüfte hoch“) und Atemhinweis
 - Wiederholungen oder Countdown, Seitenwechsel, Pausen zwischen Übungen und Runden, Piepton und Vibration, Bildschirm bleibt an
 - Gewicht pro Übung mit Steigerungshinweis

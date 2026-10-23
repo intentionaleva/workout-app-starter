@@ -10,6 +10,22 @@
   <img src="docs/screenshots/en-player.png" width="250" alt="Player with rep counter, weight log and form cues">
 </p>
 
+## Why I built this
+
+I wanted something super simple that follows what research says about ageing well. The big factors
+for staying healthy into old age are **stability, mobility, strength and endurance**. I don't want to
+go to the gym four times a week, and I'm not into extreme sports. I just want a simple routine that
+covers the basics, so we can keep moving our bodies until we're old.
+
+That's what the example plan does:
+
+- **Mobility:** a daily 8-minute morning routine, partly done in bed
+- **Stability:** balance and core work like bird dogs, side planks and single-leg deadlifts
+- **Strength:** two 35-minute workouts a week with a kettlebell and dumbbells
+- **Endurance:** 5 × 30 minutes of anything that gets you a little out of breath (the WHO's 150 minutes a week)
+
+## What's inside
+
 - Animated stick figure for every exercise, with the current phase ("Drive through your heels, hips up") and a breathing cue
 - Rep counter or countdown, left/right sides, rests between exercises and rounds, beeps and vibration, screen stays on
 - Weight log per exercise with a progression hint
